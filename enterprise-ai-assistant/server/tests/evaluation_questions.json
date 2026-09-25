@@ -1,0 +1,50 @@
+[
+  {
+    "id": "eval-01-leave",
+    "category": "Leave policy",
+    "question": "How many casual leaves do employees get?",
+    "expected_source": "leave-policy",
+    "expected_status": "relevant_context_found",
+    "should_pass_grounding": true
+  },
+  {
+    "id": "eval-02-expense",
+    "category": "Expense policy",
+    "question": "What is the policy for internet expense reimbursements?",
+    "expected_source": "expense-policy",
+    "expected_status": "relevant_context_found",
+    "should_pass_grounding": true
+  },
+  {
+    "id": "eval-03-it-security",
+    "category": "IT policy",
+    "question": "What are the password requirements under IT security guidelines?",
+    "expected_source": "it-security-guidelines",
+    "expected_status": "relevant_context_found",
+    "should_pass_grounding": true
+  },
+  {
+    "id": "eval-04-handbook",
+    "category": "Employee handbook",
+    "question": "What are the standard core working hours for employees?",
+    "expected_source": "employee-handbook",
+    "expected_status": "relevant_context_found",
+    "should_pass_grounding": true
+  },
+  {
+    "id": "eval-05-cross-document",
+    "category": "Cross-document question",
+    "question": "What is the policy for leave requests and submitting expense receipts?",
+    "expected_source": "leave-policy",
+    "expected_status": "relevant_context_found",
+    "should_pass_grounding": true
+  },
+  {
+    "id": "eval-06-unknown",
+    "category": "Unknown question",
+    "question": "What is the company's private jet policy?",
+    "expected_source": null,
+    "expected_status": "insufficient_evidence",
+    "should_pass_grounding": false
+  }
+]

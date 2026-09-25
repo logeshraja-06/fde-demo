@@ -1,0 +1,17 @@
+# FastAPI backend dependencies
+# Phase 2 adds document processing libraries
+
+fastapi==0.115.0        # The web framework - handles HTTP requests
+uvicorn==0.30.6         # The server that runs FastAPI
+# Phase 2 document processing
+python-multipart==0.0.12  # Required for FastAPI to accept file uploads (multipart/form-data)
+pypdf==5.1.0            # Reads and extracts text from PDF files
+requests==2.34.2         # HTTP client for testing
+
+# Phase 3 RAG Retrieval dependencies
+chromadb>=0.5.0          # Local persistent vector database
+sentence-transformers>=3.0.0  # Local lightweight embeddings (all-MiniLM-L6-v2)
+
+# Phase 4 LLM Integration (Google Gemini)
+google-genai>=0.1.0      # Official Google GenAI SDK for Gemini models
+python-dotenv>=1.0.0     # Loads GEMINI_API_KEY from .env file

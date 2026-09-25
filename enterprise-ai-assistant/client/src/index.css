@@ -1,0 +1,106 @@
+/* index.css
+ * =========
+ * This is the global stylesheet for the entire React app.
+ * We import Tailwind here, which gives us access to all utility classes.
+ * We also define our custom design tokens (colors, fonts, etc.) as CSS variables.
+ *
+ * NOTE: Google Fonts @import MUST come before @import "tailwindcss"
+ * because PostCSS requires all @import statements to be at the top.
+ */
+
+/* ============================================================
+   Google Font Import — must be FIRST
+   'Inter' is a clean, professional sans-serif font used widely
+   in enterprise SaaS products like Linear, Vercel, and Notion.
+   ============================================================ */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+@import "tailwindcss";
+
+/* ============================================================
+   CSS Custom Properties (Design Tokens)
+   These variables define our color palette and spacing.
+   Centralizing them here means we can update the whole
+   app's look by changing one place.
+   ============================================================ */
+:root {
+  /* Background colors - dark layered surfaces */
+  --color-bg-base: #0d0f14;
+  --color-bg-surface: #13161d;
+  --color-bg-elevated: #1a1e28;
+  --color-bg-overlay: #1f2436;
+
+  /* Sidebar */
+  --color-sidebar-bg: #0f1117;
+  --color-sidebar-border: #1e2335;
+
+  /* Brand accent - a restrained blue-indigo */
+  --color-accent: #4f75ff;
+  --color-accent-hover: #6b8fff;
+  --color-accent-muted: rgba(79, 117, 255, 0.12);
+
+  /* Text hierarchy */
+  --color-text-primary: #e8eaf0;
+  --color-text-secondary: #8b92a8;
+  --color-text-muted: #555d76;
+
+  /* Status colors */
+  --color-success: #34d399;
+  --color-success-muted: rgba(52, 211, 153, 0.12);
+  --color-error: #f87171;
+  --color-warning: #fbbf24;
+
+  /* Borders */
+  --color-border: #1e2335;
+  --color-border-subtle: #191d2a;
+
+  /* Spacing scale */
+  --sidebar-width: 240px;
+  --header-height: 60px;
+
+  /* Typography */
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ============================================================
+   Base Reset & Body
+   ============================================================ */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+  background-color: var(--color-bg-base);
+  color: var(--color-text-primary);
+}
+
+#root {
+  height: 100%;
+}
+
+/* ============================================================
+   Scrollbar Styling
+   ============================================================ */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-muted);
+}

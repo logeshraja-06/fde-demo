@@ -1,0 +1,75 @@
+# ===========================
+# Node / Frontend
+# ===========================
+node_modules/
+dist/
+.vite/
+*.local
+
+# ===========================
+# Python / Backend
+# ===========================
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+.eggs/
+
+# Virtual environments
+venv/
+.venv/
+env/
+.env/
+
+# ===========================
+# IDE / Editor
+# ===========================
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# ===========================
+# Environment / Secrets
+# ===========================
+.env
+.env.local
+.env.*.local
+
+# ===========================
+# Logs
+# ===========================
+*.log
+npm-debug.log*
+
+# ===========================
+# Knowledge Base
+# ===========================
+knowledge-base/*.pdf
+knowledge-base/*.docx
+knowledge-base/*.txt
+
+# ===========================
+# Phase 2 - Document Storage
+# ===========================
+# Uploaded files (PDFs, TXTs) are not committed — they can be large
+server/data/uploads/*
+!server/data/uploads/.gitkeep
+
+# Processed JSON files are not committed — they are derived from uploads
+server/data/processed/*
+!server/data/processed/.gitkeep
+
+# ===========================
+# Phase 3 - ChromaDB Vector Store
+# ===========================
+server/data/chroma/*
+!server/data/chroma/.gitkeep
+

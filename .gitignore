@@ -1,0 +1,67 @@
+# ===========================
+# Node / Frontend
+# ===========================
+node_modules/
+**/node_modules/
+dist/
+**/dist/
+.vite/
+**/.vite/
+*.local
+
+# ===========================
+# Python / Backend
+# ===========================
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+build/
+
+# Virtual environments
+venv/
+**/venv/
+.venv/
+**/.venv/
+env/
+.env/
+
+# ===========================
+# IDE / Editor / System
+# ===========================
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# ===========================
+# Environment / Secrets
+# ===========================
+.env
+**/.env
+.env.local
+.env.*.local
+
+# ===========================
+# Logs
+# ===========================
+*.log
+npm-debug.log*
+
+# ===========================
+# Knowledge Base & Uploads / Chroma
+# ===========================
+enterprise-ai-assistant/knowledge-base/*.pdf
+enterprise-ai-assistant/knowledge-base/*.docx
+enterprise-ai-assistant/knowledge-base/*.txt
+**/server/data/uploads/*
+!**/server/data/uploads/.gitkeep
+**/server/data/processed/*
+!**/server/data/processed/.gitkeep
+**/server/data/chroma/*
+!**/server/data/chroma/.gitkeep
