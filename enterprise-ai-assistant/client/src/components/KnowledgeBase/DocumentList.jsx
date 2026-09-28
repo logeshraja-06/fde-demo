@@ -127,8 +127,23 @@ function DocumentList({ documents, selectedId, onSelect, onDelete, isLoading }) 
                 </div>
               </div>
 
-              {/* Status indicator */}
+              {/* Domain & Status indicators */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+                {doc.domain && (
+                  <span
+                    style={{
+                      fontSize: '11px',
+                      color: doc.domain === 'HR' ? '#818cf8' : doc.domain === 'Finance' ? '#34d399' : doc.domain === 'IT' ? '#fbbf24' : '#94a3b8',
+                      fontWeight: 600,
+                      background: doc.domain === 'HR' ? 'rgba(99, 102, 241, 0.12)' : doc.domain === 'Finance' ? 'rgba(16, 185, 129, 0.12)' : doc.domain === 'IT' ? 'rgba(245, 158, 11, 0.12)' : 'rgba(148, 163, 184, 0.12)',
+                      border: `1px solid ${doc.domain === 'HR' ? 'rgba(99, 102, 241, 0.25)' : doc.domain === 'Finance' ? 'rgba(16, 185, 129, 0.25)' : doc.domain === 'IT' ? 'rgba(245, 158, 11, 0.25)' : 'rgba(148, 163, 184, 0.25)'}`,
+                      padding: '2px 8px',
+                      borderRadius: '4px',
+                    }}
+                  >
+                    {doc.domain}
+                  </span>
+                )}
                 {doc.status === 'indexed' ? (
                   <span
                     style={{

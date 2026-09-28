@@ -14,13 +14,16 @@ import { request, LLM_CHAT_TIMEOUT_MS } from './api'
  * @param {number|null} threshold - Cosine similarity cutoff
  * @returns {Promise<object>}
  */
-export async function sendChatMessage(message, topK = 4, threshold = null) {
+export async function sendChatMessage(message, topK = 4, threshold = null, domain = null) {
   const payload = {
     message: message !== undefined && message !== null ? message : '',
     top_k: Number(topK),
   }
   if (threshold !== null && threshold !== undefined) {
     payload.threshold = Number(threshold)
+  }
+  if (domain && domain.toUpperCase() !== 'ALL') {
+    payload.domain = domain
   }
 
   return request('/chat', {

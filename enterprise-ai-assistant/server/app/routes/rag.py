@@ -27,12 +27,14 @@ class SearchRequest(BaseModel):
     query: str = Field(..., description="The natural language question to search the knowledge base for.", min_length=1)
     top_k: int = Field(default=DEFAULT_TOP_K, ge=1, le=20, description="Number of top relevant chunks to retrieve.")
     threshold: float = Field(default=DEFAULT_SIMILARITY_THRESHOLD, ge=0.0, le=1.0, description="Minimum cosine similarity score (0.0 to 1.0).")
+    domain: Optional[str] = Field(default=None, description="Optional knowledge domain filter (e.g. 'HR', 'Finance', 'IT', 'ALL').")
 
 
 class SearchResultChunk(BaseModel):
     chunk_id: str
     source: str
     document_id: Optional[str] = None
+    domain: Optional[str] = None
     page: Optional[int] = None
     score: float
     distance: Optional[float] = None
@@ -57,7 +59,7 @@ class SearchResponse(BaseModel):
     summary="Retrieve semantically relevant chunks from the knowledge base",
     description="Embeds the user question, performs cosine similarity search in ChromaDB, and returns top-K matching chunks."
 )
-async def search_endpoint(payload: SearchRequest):
+def search_endpoint(payload: SearchRequest):
     """
     Search knowledge base for chunks relevant to the given query.
     """
@@ -65,7 +67,8 @@ async def search_endpoint(payload: SearchRequest):
         results = search_knowledge_base(
             query=payload.query,
             top_k=payload.top_k,
-            threshold=payload.threshold
+            threshold=payload.threshold,
+            domain=payload.domain
         )
         return results
     except ValueError as exc:
@@ -76,7 +79,7 @@ async def search_endpoint(payload: SearchRequest):
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail={"code": ErrorCode.RAG_SEARCH_ERROR, "message": "Failed to search the knowledge base. Please try again."}
+            detail={"code": ErrorCode.RAG_SEARCH_ERROR, "message": str(exc)}
         )
 
 
@@ -84,7 +87,7 @@ async def search_endpoint(payload: SearchRequest):
     "/stats",
     summary="Get RAG vector database & embedding model metadata"
 )
-async def stats_endpoint():
+def stats_endpoint():
     """
     Return statistics about indexed chunks and the local embedding model.
     """

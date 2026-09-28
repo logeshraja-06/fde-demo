@@ -37,34 +37,21 @@ DEFAULT_TOP_K = 3
 def search_knowledge_base(
     query: str,
     top_k: int = DEFAULT_TOP_K,
-    threshold: float = DEFAULT_SIMILARITY_THRESHOLD
+    threshold: float = DEFAULT_SIMILARITY_THRESHOLD,
+    domain: Optional[str] = None
 ) -> Dict[str, Any]:
     """
     Search the vector database for chunks semantically relevant to the user query.
+    Supports optional domain filtering (HR, Finance, IT).
 
     Args:
         query: The user's question or search phrase.
         top_k: Number of chunks to retrieve (e.g. 1 to 10).
         threshold: Minimum cosine similarity score required (0.0 to 1.0).
+        domain: Optional knowledge domain filter.
 
     Returns:
-        Dict matching the Phase 3 specification:
-        {
-          "query": "...",
-          "top_k": 3,
-          "threshold": 0.35,
-          "total_found": 3,
-          "results": [
-            {
-              "chunk_id": "leave-policy-001",
-              "source": "leave-policy.pdf",
-              "page": 1,
-              "score": 0.91,
-              "text": "..."
-            }
-          ],
-          "message": Optional string when no results match threshold
-        }
+        Dict matching the Phase 3 & Phase 8 specification with results and domain info.
     """
     # 1. Validate Query
     cleaned_query = (query or "").strip()
@@ -78,8 +65,8 @@ def search_knowledge_base(
     # 2. Convert user question into an embedding vector
     query_vector = get_embedding(cleaned_query)
 
-    # 3. Retrieve nearest neighbors from ChromaDB
-    raw_results = query_vector_store(query_vector, top_k=effective_k)
+    # 3. Retrieve nearest neighbors from ChromaDB (with optional domain filter)
+    raw_results = query_vector_store(query_vector, top_k=effective_k, domain=domain)
 
     # 4. Filter by relevance threshold
     filtered_results = [

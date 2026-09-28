@@ -52,7 +52,7 @@ PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
 
 # ── Public interface ──────────────────────────────────────────────────────────
 
-def process_document(filename: str, file_bytes: bytes, content_type: str) -> dict:
+def process_document(filename: str, file_bytes: bytes, content_type: str, domain: Optional[str] = None) -> dict:
     """
     Full pipeline: validate -> duplicate check -> save -> extract -> clean -> chunk -> store -> embed -> index.
 
@@ -60,9 +60,10 @@ def process_document(filename: str, file_bytes: bytes, content_type: str) -> dic
         filename:     Original filename from user upload.
         file_bytes:   Raw bytes of the file.
         content_type: MIME type sent by browser.
+        domain:       Optional knowledge domain ('HR', 'Finance', 'IT', etc.).
 
     Returns:
-        A dict representing the processed and indexed document.
+        A dict representing the processed and indexed document with domain metadata.
     """
     # 1. Validate
     _validate_file(filename, file_bytes, content_type)
@@ -79,18 +80,31 @@ def process_document(filename: str, file_bytes: bytes, content_type: str) -> dic
             logger.info("Replaced existing document '%s' (previous ID: %s)", filename, replaced_id)
             break
 
-    # 3. Assign unique ID and metadata
+    # 3. Domain classification with smart inference fallback
+    assigned_domain = domain.strip() if domain and domain.strip() else ""
+    if not assigned_domain or assigned_domain.lower() in ("general", "all"):
+        fname = filename.lower()
+        if any(k in fname for k in ("leave", "handbook", "hr", "conduct", "employee")):
+            assigned_domain = "HR"
+        elif any(k in fname for k in ("expense", "travel", "finance", "receipt", "reimbursement")):
+            assigned_domain = "Finance"
+        elif any(k in fname for k in ("security", "password", "it-", "device", "it_")):
+            assigned_domain = "IT"
+        else:
+            assigned_domain = "General"
+
+    # 4. Assign unique ID and metadata
     document_id = str(uuid.uuid4())
     extension   = Path(filename).suffix.lower()          # ".pdf" or ".txt"
     file_type   = extension.lstrip(".")                  # "pdf" or "txt"
     uploaded_at = datetime.now(timezone.utc).isoformat()
 
-    # 4. Save original file
+    # 5. Save original file
     safe_filename = f"{document_id}{extension}"
     upload_path   = UPLOADS_DIR / safe_filename
     upload_path.write_bytes(file_bytes)
 
-    # 5. Extract raw text
+    # 6. Extract raw text
     try:
         raw_text, page_count = _extract_text_and_meta(upload_path, file_type, file_bytes)
     except ValueError:
@@ -102,14 +116,14 @@ def process_document(filename: str, file_bytes: bytes, content_type: str) -> dic
             raise RuntimeError("Unable to process this PDF.") from exc
         raise RuntimeError(f"Text extraction failed: {exc}") from exc
 
-    # 6. Clean text
+    # 7. Clean text
     cleaned_text = _clean_text(raw_text)
 
     if not cleaned_text.strip():
         upload_path.unlink(missing_ok=True)
         raise ValueError("The document does not contain usable text.")
 
-    # 7. Chunk text
+    # 8. Chunk text
     document_slug = make_document_slug(filename)
     chunks        = create_chunks(cleaned_text, document_slug)
 
@@ -117,7 +131,7 @@ def process_document(filename: str, file_bytes: bytes, content_type: str) -> dic
         upload_path.unlink(missing_ok=True)
         raise ValueError("The document was too short to produce any chunks.")
 
-    # 7. Generate Embeddings & Index in Vector DB (Phase 3)
+    # 9. Generate Embeddings & Index in Vector DB with Domain (Phase 3 & Phase 8)
     chunk_texts = [c["text"] for c in chunks]
     try:
         embeddings = get_embeddings(chunk_texts)
@@ -126,20 +140,22 @@ def process_document(filename: str, file_bytes: bytes, content_type: str) -> dic
             filename=filename,
             chunks=chunks,
             embeddings=embeddings,
-            page_number=1 if file_type == "pdf" else None
+            page_number=1 if file_type == "pdf" else None,
+            domain=assigned_domain
         )
         status_value = "indexed"
     except Exception as exc:
-        # If vector indexing fails, keep chunked data but note status
+        logger.warning("Indexing error for %s: %s", filename, exc)
         status_value = "processed"
 
     indexed_at = datetime.now(timezone.utc).isoformat() if status_value == "indexed" else None
 
-    # 8. Build full processed document record
+    # 10. Build full processed document record
     processed = {
         "document_id": document_id,
         "filename":    filename,
         "file_type":   file_type,
+        "domain":      assigned_domain,
         "chunk_count": len(chunks),
         "status":      status_value,
         "uploaded_at": uploaded_at,
@@ -148,9 +164,9 @@ def process_document(filename: str, file_bytes: bytes, content_type: str) -> dic
         "chunks":      chunks,
     }
 
-    # 9. Save to data/processed/<document_id>.json
+    # 11. Save to data/processed/<document_id>.json
     processed_path = PROCESSED_DIR / f"{document_id}.json"
-    processed_path.write_text(json.dumps(processed, indent=2, ensure_ascii=False))
+    processed_path.write_text(json.dumps(processed, indent=2, ensure_ascii=False), encoding="utf-8")
 
     return processed
 
@@ -162,11 +178,12 @@ def list_documents() -> list[dict]:
     documents = []
     for json_file in sorted(PROCESSED_DIR.glob("*.json")):
         try:
-            data = json.loads(json_file.read_text())
+            data = json.loads(json_file.read_text(encoding="utf-8"))
             documents.append({
                 "document_id": data["document_id"],
                 "filename":    data["filename"],
                 "file_type":   data["file_type"],
+                "domain":      data.get("domain", "General"),
                 "chunk_count": data["chunk_count"],
                 "status":      data.get("status", "indexed"),
                 "uploaded_at": data.get("uploaded_at", ""),

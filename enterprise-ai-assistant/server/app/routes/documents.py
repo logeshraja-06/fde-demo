@@ -22,7 +22,8 @@ HTTP Status Codes used:
   500 Server Error  — Unexpected backend failure
 """
 
-from fastapi import APIRouter, File, UploadFile, HTTPException
+from typing import Optional
+from fastapi import APIRouter, File, UploadFile, Form, HTTPException
 
 from app.models.errors import ErrorCode
 from app.services import document_processor
@@ -39,19 +40,12 @@ router = APIRouter(
 # ─────────────────────────────────────────────────────────────────────────────
 
 @router.post("/upload", status_code=201)
-async def upload_document(file: UploadFile = File(...)):
+async def upload_document(
+    file: UploadFile = File(...),
+    domain: Optional[str] = Form(None)
+):
     """
-    Upload a PDF or TXT document, process it, and return the result.
-
-    WHAT IS multipart/form-data?
-    ----------------------------
-    When a browser uploads a file, it cannot send raw bytes in JSON.
-    Instead it uses a special encoding called "multipart/form-data".
-    The request body is split into "parts" — one part per field/file.
-    FastAPI's UploadFile automatically handles this encoding for us.
-
-    The 'file: UploadFile' parameter tells FastAPI to expect a file
-    in the request body. The 'File(...)' marker makes it required.
+    Upload a PDF or TXT document with optional knowledge domain classification (HR, Finance, IT).
     """
     # Read the raw bytes from the upload
     file_bytes = await file.read()
@@ -61,6 +55,7 @@ async def upload_document(file: UploadFile = File(...)):
             filename     = file.filename or "unnamed",
             file_bytes   = file_bytes,
             content_type = file.content_type or "",
+            domain       = domain,
         )
     except ValueError as exc:
         raise HTTPException(
@@ -84,6 +79,7 @@ async def upload_document(file: UploadFile = File(...)):
         "document_id": processed["document_id"],
         "filename":    processed["filename"],
         "file_type":   processed["file_type"],
+        "domain":      processed.get("domain", "General"),
         "chunk_count": processed["chunk_count"],
         "status":      processed["status"],
         "uploaded_at": processed["uploaded_at"],

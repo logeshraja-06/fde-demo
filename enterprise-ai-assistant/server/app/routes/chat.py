@@ -28,6 +28,7 @@ from app.services.prompt_builder import build_rag_prompt
 from app.services.llm_service import generate_grounded_response, is_llm_configured, get_gemini_model_name
 from app.services.output_guardrail import validate_llm_output
 from app.services.analytics_service import record_chat_event
+from app.services.config_service import get_customer_config
 
 logger = logging.getLogger("enterprise_ai.chat")
 
@@ -41,13 +42,15 @@ RAG_GROUNDING_THRESHOLD = float(os.getenv("RAG_RELEVANCE_THRESHOLD", str(DEFAULT
 
 class ChatRequest(BaseModel):
     message: str = Field(..., description="User question or prompt for the AI assistant")
-    top_k: Optional[int] = Field(default=DEFAULT_TOP_K, ge=1, le=10)
+    top_k: Optional[int] = Field(default=None, ge=1, le=10)
     threshold: Optional[float] = Field(default=None, ge=0.0, le=1.0)
+    domain: Optional[str] = Field(default=None, description="Optional domain filter (e.g. 'HR', 'Finance', 'IT', 'ALL')")
 
 
 class SourceCitation(BaseModel):
     source: str
     page: Optional[int] = None
+    domain: Optional[str] = None
     score: float
     chunk_id: str
     text: str
@@ -84,15 +87,19 @@ class ChatResponse(BaseModel):
 def chat_endpoint(payload: ChatRequest):
     start_time = time.perf_counter()
     user_message = payload.message or ""
-    active_threshold = payload.threshold if payload.threshold is not None else RAG_GROUNDING_THRESHOLD
-    effective_k = payload.top_k or DEFAULT_TOP_K
 
-    logger.info("Chat request received: query='%s' (top_k=%d, threshold=%.2f)", user_message[:60], effective_k, active_threshold)
+    # Load active runtime customer configuration
+    cust_cfg = get_customer_config()
+    max_input_len = cust_cfg.get("max_input_length", DEFAULT_MAX_INPUT_LENGTH)
+    active_threshold = payload.threshold if payload.threshold is not None else float(cust_cfg.get("grounding_threshold", RAG_GROUNDING_THRESHOLD))
+    effective_k = payload.top_k if payload.top_k is not None else int(cust_cfg.get("rag_top_k", DEFAULT_TOP_K))
+
+    logger.info("Chat request received: query='%s' (top_k=%d, threshold=%.2f, domain=%s)", user_message[:60], effective_k, active_threshold, payload.domain)
 
     # =========================================================================
     # LAYER 1: INPUT GUARDRAILS
     # =========================================================================
-    input_validation = validate_user_input(user_message, max_length=DEFAULT_MAX_INPUT_LENGTH)
+    input_validation = validate_user_input(user_message, max_length=max_input_len)
 
     if not input_validation["passed"]:
         elapsed_ms = (time.perf_counter() - start_time) * 1000.0
@@ -133,7 +140,8 @@ def chat_endpoint(payload: ChatRequest):
         retrieval_res = search_knowledge_base(
             query=user_message,
             top_k=effective_k,
-            threshold=active_threshold
+            threshold=active_threshold,
+            domain=payload.domain
         )
     except Exception as exc:
         logger.error("RAG retrieval execution failure: %s", exc)
@@ -191,6 +199,7 @@ def chat_endpoint(payload: ChatRequest):
         SourceCitation(
             source=chunk.get("source", "Unknown Document"),
             page=chunk.get("page"),
+            domain=chunk.get("domain", "General"),
             score=chunk.get("score", 0.0),
             chunk_id=chunk.get("chunk_id", ""),
             text=chunk.get("text", "")

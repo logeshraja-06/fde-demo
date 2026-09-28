@@ -12,7 +12,7 @@
  *  - Real-time Analytics & Execution Audit Log
  */
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Sidebar from './components/Sidebar'
 import Header from './components/Header'
 import DashboardView from './components/Dashboard/DashboardView'
@@ -21,10 +21,13 @@ import KnowledgeBaseView from './components/KnowledgeBase/KnowledgeBaseView'
 import RetrievalPlayground from './components/RetrievalPlayground/RetrievalPlayground'
 import GuardrailsView from './components/Guardrails/GuardrailsView'
 import AnalyticsView from './components/Analytics/AnalyticsView'
+import FdeWorkspaceView from './components/Fde/FdeWorkspaceView'
 import useBackendStatus from './hooks/useBackendStatus'
+import { getCustomerConfig, updateCustomerConfig } from './services/api'
 
 // Map each nav item to a human-readable page title shown in Header
 const PAGE_TITLES = {
+  fde:         'FDE Customer Implementation Workspace',
   overview:    'System Overview & Dashboard',
   assistant:   'AI Assistant',
   knowledge:   'Knowledge Base',
@@ -34,11 +37,55 @@ const PAGE_TITLES = {
 }
 
 function App() {
-  // Default to the overview/dashboard or assistant
-  const [activeNav, setActiveNav] = useState('overview')
+  // Default to the FDE Workspace or overview
+  const [activeNav, setActiveNav] = useState('fde')
+  // Role-Based View Simulation: 'customer' (simplified) vs 'engineering' (full pipeline)
+  const [viewMode, setViewMode] = useState('engineering')
+
+  // Customer Configuration State (Acme Corporation default)
+  const [customerConfig, setCustomerConfig] = useState({
+    organization: 'Acme Corporation',
+    assistant_name: 'Acme Knowledge Assistant',
+    domains: ['HR', 'Finance', 'IT'],
+    max_input_length: 2000,
+    rag_top_k: 3,
+    grounding_threshold: 0.70,
+    allow_unknown_answers: true,
+    show_sources: true,
+  })
 
   // Check if FastAPI backend is reachable
   const connectionStatus = useBackendStatus()
+
+  // Fetch real customer configuration from backend on mount
+  useEffect(() => {
+    async function loadConfig() {
+      try {
+        const config = await getCustomerConfig()
+        if (config && config.organization) {
+          setCustomerConfig(config)
+        }
+      } catch (err) {
+        console.warn('Could not load customer config, using defaults:', err)
+      }
+    }
+    loadConfig()
+  }, [connectionStatus])
+
+  const handleUpdateConfig = async (newConfig) => {
+    try {
+      const updated = await updateCustomerConfig(newConfig)
+      setCustomerConfig(updated)
+      return { success: true }
+    } catch (err) {
+      console.error('Failed to update config:', err)
+      return { success: false, error: err.message }
+    }
+  }
+
+  const handleToggleViewMode = (mode) => {
+    setViewMode(mode)
+  }
 
   return (
     <div
@@ -55,6 +102,7 @@ function App() {
         onNavChange={setActiveNav}
         connectionStatus={connectionStatus}
         kbReady={connectionStatus === 'connected'}
+        customerConfig={customerConfig}
       />
 
       {/* Right side: header + content */}
@@ -70,6 +118,9 @@ function App() {
         <Header
           title={PAGE_TITLES[activeNav] || 'Enterprise AI Assistant'}
           connectionStatus={connectionStatus}
+          viewMode={viewMode}
+          onToggleViewMode={handleToggleViewMode}
+          customerConfig={customerConfig}
         />
 
         {/* Backend Unavailable Banner (Section 6 Requirement) */}
@@ -97,22 +148,34 @@ function App() {
 
         {/* Main content area */}
         <main style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+          {/* Phase 8: Forward Deployed Engineering Customer Implementation Workspace */}
+          {activeNav === 'fde' && (
+            <FdeWorkspaceView
+              config={customerConfig}
+              onUpdateConfig={handleUpdateConfig}
+              onNavigate={setActiveNav}
+            />
+          )}
+
           {/* Phase 6: Operational Telemetry & Overview Dashboard */}
           {activeNav === 'overview' && (
             <DashboardView onNavigate={setActiveNav} />
           )}
 
-          {/* Phase 4/5/6: Grounded AI Assistant Chat with Visible Pipeline */}
+          {/* Phase 4/5/6/8: Grounded AI Assistant Chat with Customer / Engineering Mode */}
           {activeNav === 'assistant' && (
-            <ChatView />
+            <ChatView
+              customerConfig={customerConfig}
+              viewMode={viewMode}
+            />
           )}
 
-          {/* Phase 2/6: Knowledge Base with Visual Processing Lifecycle */}
+          {/* Phase 2/6/8: Knowledge Base with Domain Classification */}
           {activeNav === 'knowledge' && (
             <KnowledgeBaseView />
           )}
 
-          {/* Phase 3: RAG Retrieval Playground */}
+          {/* Phase 3/8: RAG Retrieval Playground with Domain Filtering */}
           {activeNav === 'retrieval' && (
             <RetrievalPlayground />
           )}

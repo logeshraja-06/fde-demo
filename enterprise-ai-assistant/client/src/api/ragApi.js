@@ -14,14 +14,19 @@ import { request } from './api'
  * @param {number} threshold - Minimum cosine similarity score required
  * @returns {Promise<object>}
  */
-export async function searchKnowledgeBase(query, topK = 3, threshold = 0.35) {
+export async function searchKnowledgeBase(query, topK = 3, threshold = 0.35, domain = null) {
+  const body = {
+    query: (query || '').trim(),
+    top_k: Number(topK),
+    threshold: Number(threshold),
+  }
+  if (domain && domain.toUpperCase() !== 'ALL') {
+    body.domain = domain
+  }
+
   return request('/rag/search', {
     method: 'POST',
-    body: JSON.stringify({
-      query: (query || '').trim(),
-      top_k: Number(topK),
-      threshold: Number(threshold),
-    }),
+    body: JSON.stringify(body),
   })
 }
 

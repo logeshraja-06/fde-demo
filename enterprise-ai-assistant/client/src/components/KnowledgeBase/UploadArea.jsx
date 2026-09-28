@@ -25,6 +25,7 @@ const MAX_MB = 10
 function UploadArea({ onUploadSuccess }) {
   const [uploadState, setUploadState] = useState('idle') // idle | selected | uploading | processing | success | error
   const [selectedFile, setSelectedFile] = useState(null)
+  const [domain, setDomain] = useState('HR')
   const [errorMessage, setErrorMessage] = useState('')
   const [isDragOver, setIsDragOver] = useState(false)
   const fileInputRef = useRef(null)
@@ -54,6 +55,17 @@ function UploadArea({ onUploadSuccess }) {
       return
     }
     setSelectedFile(file)
+    // Intelligent domain pre-selection based on file name
+    const lower = file.name.toLowerCase()
+    if (lower.includes('leave') || lower.includes('handbook') || lower.includes('remote') || lower.includes('employee')) {
+      setDomain('HR')
+    } else if (lower.includes('expense') || lower.includes('travel') || lower.includes('reimburse') || lower.includes('finance')) {
+      setDomain('Finance')
+    } else if (lower.includes('security') || lower.includes('password') || lower.includes('device') || lower.includes('it')) {
+      setDomain('IT')
+    } else {
+      setDomain('General')
+    }
     setUploadState('selected')
   }
 
@@ -84,13 +96,11 @@ function UploadArea({ onUploadSuccess }) {
       setUploadState('uploading')
 
       // After a short moment the bytes are sent; FastAPI is now processing
-      // We use a small timer to transition to "processing" state visually
-      // so the user knows the backend is working (not just loading)
       const processingTimer = setTimeout(() => {
         setUploadState('processing')
       }, 800)
 
-      const result = await uploadDocument(selectedFile)
+      const result = await uploadDocument(selectedFile, domain)
 
       clearTimeout(processingTimer)
       setUploadState('success')
@@ -186,13 +196,52 @@ function UploadArea({ onUploadSuccess }) {
             <div style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>
               {(selectedFile?.size / 1024).toFixed(0)} KB
             </div>
-            <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+
+            {/* Knowledge Domain Selector */}
+            <div
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                marginTop: 6,
+                background: 'var(--color-bg-base)',
+                border: '1px solid var(--color-border)',
+                borderRadius: 6,
+                padding: '4px 10px',
+              }}
+            >
+              <label style={{ fontSize: 11, color: 'var(--color-text-secondary)', fontWeight: 600 }}>
+                Domain:
+              </label>
+              <select
+                id="upload-domain-select"
+                value={domain}
+                onChange={(e) => setDomain(e.target.value)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--color-brand)',
+                  fontWeight: 700,
+                  fontSize: 12,
+                  outline: 'none',
+                  cursor: 'pointer',
+                }}
+              >
+                <option value="HR">HR</option>
+                <option value="Finance">Finance</option>
+                <option value="IT">IT</option>
+                <option value="General">General</option>
+              </select>
+            </div>
+
+            <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
               <button
                 id="upload-btn"
                 onClick={(e) => { e.stopPropagation(); handleUpload() }}
                 style={btnStyle('primary')}
               >
-                Upload & Process
+                Upload to {domain}
               </button>
               <button
                 onClick={(e) => { e.stopPropagation(); handleReset() }}

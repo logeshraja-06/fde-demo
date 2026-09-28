@@ -116,6 +116,7 @@ function DocumentDetail({ documentId, onClose }) {
 
               <MetaGrid rows={[
                 ['Document ID', doc.document_id],
+                ['Domain',      doc.domain || 'General'],
                 ['File type',   doc.file_type.toUpperCase()],
                 ['Chunks',      doc.chunk_count],
                 ['Status',      doc.status === 'indexed' ? 'Indexed in Vector DB' : doc.status],

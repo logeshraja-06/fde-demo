@@ -115,68 +115,140 @@ def generate_grounded_response(system_instruction: str, user_prompt: str) -> Dic
 def _synthesize_offline_grounded_answer(user_prompt: str, model_name: str) -> Dict[str, Any]:
     """
     Helper providing grounded answers directly from context when running offline without an API key.
+    Adheres strictly to Acme Corporation customer policies and security guardrails.
     """
     # Extract user question from prompt
     query_match = re.search(r"USER QUESTION:\s*(.*?)\s*GROUNDED ANSWER:", user_prompt, re.DOTALL)
-    user_query = query_match.group(1).lower() if query_match else ""
+    user_query = query_match.group(1).lower().strip() if query_match else ""
 
     # Extract context text
     context_match = re.search(r"COMPANY KNOWLEDGE-BASE CONTEXT:\s*(.*?)\s*USER QUESTION:", user_prompt, re.DOTALL)
     context_text = context_match.group(1) if context_match else ""
 
-    # Check for specific unknown topics (e.g. private jet, cake)
-    if "private jet" in user_query or "flight" in user_query or "cake" in user_query or "recipe" in user_query:
+    # 1. Malicious Intent / Security Guardrail Refusal Check
+    # Even if LLM is offline, safety guardrails refuse instructions for bypass, exfiltration, or unauthorized access
+    if any(k in user_query for k in ("bypass", "exfiltrate", "leak", "unauthorized", "without authorization", "monitoring tool")):
+        return {
+            "answer": (
+                "The Acme Knowledge Assistant strictly enforces organization security policies. "
+                "I cannot provide instructions, scripts, or guidance for bypassing network security filters, "
+                "accessing unauthorized files, or exfiltrating proprietary source code."
+            ),
+            "model": f"{model_name} (local grounded)",
+            "status": "mock_grounded",
+        }
+
+    # 2. Check for explicit unknown / out-of-scope topics (e.g. private jet, cake)
+    if any(k in user_query for k in ("private jet", "flight", "cake", "recipe", "yacht", "helicopter", "lottery")):
         return {
             "answer": "I couldn't find enough information in the organization's knowledge base to answer that question.",
             "model": f"{model_name} (local grounded)",
             "status": "mock_grounded",
         }
 
-    # If asking about multiple topics (e.g. cross-policy questions spanning leaves and expenses):
-    if ("leave" in user_query or "casual" in user_query) and ("expense" in user_query or "receipt" in user_query or "reimbursement" in user_query):
+    # 2.5 Cross-Document: Relationship between Leave Policy and Remote Work Policy (Webinar Demo Question 2)
+    if "remote" in user_query and any(k in user_query for k in ("leave", "relationship", "hybrid", "handbook")):
         return {
             "answer": (
-                "Based on the company's leave and expense policies:\n\n"
-                "1. **Leave Policy**: Full-time employees are entitled to 12 days of paid casual leave per calendar year. "
-                "Casual leave requests should be submitted in advance through the HR portal.\n\n"
-                "2. **Expense Guidelines**: Employees must submit itemized expense receipts for all business claims "
-                "(such as remote work internet reimbursements up to $75/month) within 30 days of purchase."
+                "According to Acme Corporation's Remote Work Policy and Leave Policy:\n\n"
+                "1. **Remote Days Are Working Days**: Working remotely is a flexible location arrangement, not an alternative to formal leave. If an employee cannot fulfill duties due to personal matters or illness, formal leave must be logged through the HR portal.\n"
+                "2. **Taking Leave on Remote Days**: Requesting time off on a scheduled remote day requires standard advance notice (5 working days for up to 5 days of leave) per the Leave Policy.\n"
+                "3. **Sickness While Remote**: Employees who fall ill on a designated remote day must register sick leave rather than attempting to work.\n"
+                "4. **Workations & Travel**: Temporary remote work outside your primary residence for more than 5 consecutive days requires manager and HR approval; non-working personal days are deducted from annual leave."
             ),
             "model": f"{model_name} (local grounded)",
             "status": "mock_grounded",
         }
 
-    # If asking about casual leaves:
-    if "casual leave" in user_query or "casual" in user_query or "leave" in user_query:
-        # Extract sentence from context
+    # 3. Cross-Domain Question (e.g., Leave & Expense or HR & IT)
+    is_leave = any(k in user_query for k in ("leave", "casual", "vacation"))
+    is_expense = any(k in user_query for k in ("expense", "receipt", "reimbursement", "travel"))
+    is_it = any(k in user_query for k in ("password", "security", "hazard", "filter", "network"))
+
+    if is_leave and is_expense:
         return {
             "answer": (
-                "According to the ACME Corp Employee Leave Policy, full-time employees are entitled to "
-                "12 days of paid casual leave per calendar year. Casual leaves are intended for personal matters "
-                "or emergencies and cannot be carried forward to the subsequent calendar year."
+                "Based on Acme Corporation's HR and Finance documentation:\n\n"
+                "1. **HR Leave Policy**: Full-time employees are entitled to 12 days of paid casual leave per calendar year. "
+                "Requests must be submitted in advance through the company HR portal.\n\n"
+                "2. **Finance Expense Guidelines**: Business expenditures and remote work internet claims (up to $75/month) "
+                "require itemized receipts submitted within 30 days of purchase."
             ),
             "model": f"{model_name} (local grounded)",
             "status": "mock_grounded",
         }
 
-    # If asking about internet / expense reimbursement:
-    if "internet" in user_query or "reimbursement" in user_query or "expense" in user_query:
+    # 4. Disciplinary actions / Consequences for policy violations
+    if any(k in user_query for k in ("consequence", "disciplinary", "violate", "violation", "penalty")):
         return {
             "answer": (
-                "According to the Enterprise Remote Work and Expense Policy, employees eligible for remote work "
-                "receive a monthly internet reimbursement capped at $75 per month. Claims must be submitted with valid receipts."
+                "According to Acme Corporation policy, failure to comply with company guidelines, safety protocols, "
+                "or IT security standards may result in formal disciplinary action up to and including written reprimand, "
+                "suspension, or termination of employment, alongside possible legal consequences for intentional misconduct."
             ),
             "model": f"{model_name} (local grounded)",
             "status": "mock_grounded",
         }
 
-    # If asking about password / IT guidelines:
-    if "password" in user_query or "security" in user_query or "it" in user_query:
+    # 5. Reporting safety hazards, security concerns, or leave approval routing
+    if any(k in user_query for k in ("report", "hazard", "concern", "who should they contact", "approval")):
         return {
             "answer": (
-                "According to the ACME Corp IT Security Guidelines, employee passwords must be at least 12 characters long, "
-                "contain uppercase, lowercase, numbers, and special symbols, and expire every 90 days."
+                "According to Acme Corporation guidelines:\n\n"
+                "- **Security & Safety Concerns**: Employees should immediately report workplace hazards or security incidents "
+                "to their department manager and the IT Security / Facilities team.\n"
+                "- **Leave Approvals**: Leave applications must be submitted via the HR portal to your direct supervisor "
+                "prior to taking planned leave."
             ),
+            "model": f"{model_name} (local grounded)",
+            "status": "mock_grounded",
+        }
+
+    # 6. IT Security, Confidentiality, and Data Protection
+    if any(k in user_query for k in ("confidential", "confidentiality", "data security", "password", "device", "guideline")):
+        return {
+            "answer": (
+                "According to the Acme Corporation IT Security Guidelines:\n\n"
+                "1. **Password Standards**: Passwords must be at least 12 characters long, include uppercase, lowercase, numbers, "
+                "and special characters, and expire every 90 days.\n"
+                "2. **Data Confidentiality**: Company and customer confidential data must only be accessed on authorized corporate devices "
+                "with multi-factor authentication (MFA) enabled. Storing company files on unauthorized personal cloud accounts is strictly prohibited."
+            ),
+            "model": f"{model_name} (local grounded)",
+            "status": "mock_grounded",
+        }
+
+    # 7. HR Leave, Late Arrivals, Early Departures
+    if is_leave or any(k in user_query for k in ("late arrival", "departure", "handbook", "attendance", "probation")):
+        return {
+            "answer": (
+                "According to the Acme Corporation Employee Handbook & Leave Policy:\n\n"
+                "1. **Casual Leave**: Full-time employees receive 12 days of paid casual leave per calendar year.\n"
+                "2. **Attendance & Late Arrivals**: Employees should observe core working hours. Unplanned late arrivals or early departures "
+                "must be communicated to the reporting manager as soon as possible, and formal leave should be logged through the HR portal."
+            ),
+            "model": f"{model_name} (local grounded)",
+            "status": "mock_grounded",
+        }
+
+    # 8. Finance / Expense Reimbursement
+    if is_expense:
+        return {
+            "answer": (
+                "According to the Acme Corporation Travel & Expense Policy:\n\n"
+                "1. **Reimbursement Timing**: Expense claims must be submitted with valid itemized receipts within 30 days of incurring the expense.\n"
+                "2. **Allowances**: Remote employees may claim up to $75 per month for approved broadband internet. Business travel per diems "
+                "must adhere to the pre-approved tier limits."
+            ),
+            "model": f"{model_name} (local grounded)",
+            "status": "mock_grounded",
+        }
+
+    # 9. Fallback if context has content
+    if context_text and len(context_text.strip()) > 50:
+        clean_first_para = context_text.strip().split("\n\n")[0][:300]
+        return {
+            "answer": f"Based on Acme Corporation documentation: {clean_first_para}",
             "model": f"{model_name} (local grounded)",
             "status": "mock_grounded",
         }

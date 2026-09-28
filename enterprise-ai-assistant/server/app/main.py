@@ -36,6 +36,7 @@ from app.routes import documents as documents_router
 from app.routes import rag as rag_router
 from app.routes import chat as chat_router
 from app.routes import analytics as analytics_router
+from app.routes import config as config_router
 from app.services.document_processor import ensure_all_documents_indexed
 from app.services.llm_service import is_llm_configured, get_gemini_model_name
 from app.vectorstore.chroma_store import get_vector_store_stats
@@ -226,6 +227,10 @@ app.include_router(chat_router.router, prefix="/api/chat")
 # 4. Observability & Analytics Endpoints (/analytics and /api/analytics)
 app.include_router(analytics_router.router, prefix="/analytics")
 app.include_router(analytics_router.router, prefix="/api/analytics")
+
+# 5. Customer Profile & Configuration Endpoints (/config and /api/config)
+app.include_router(config_router.router)
+app.include_router(config_router.router, prefix="/config")
 
 
 # ── Health Check ──────────────────────────────────────────────────────────────

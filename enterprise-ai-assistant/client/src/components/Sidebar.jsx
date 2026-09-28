@@ -20,16 +20,26 @@ import React from 'react'
  */
 
 const NAV_ITEMS = [
+  { id: 'fde',        label: 'FDE Workspace',        icon: '🚀', badge: 'PHASE 8' },
   { id: 'overview',   label: 'Overview',             icon: '📊', badge: null },
   { id: 'assistant',  label: 'AI Assistant',         icon: '💬', badge: 'LLM' },
   { id: 'knowledge',  label: 'Knowledge Base',       icon: '📁', badge: null },
   { id: 'retrieval',  label: 'Retrieval Playground', icon: '⚡', badge: 'RAG' },
   { id: 'guardrails', label: 'Guardrails',           icon: '🛡️', badge: 'SAFETY' },
-  { id: 'analytics',  label: 'Analytics',            icon: '📈', badge: 'PHASE 6' },
+  { id: 'analytics',  label: 'Analytics',            icon: '📈', badge: 'TELEMETRY' },
 ]
 
-export default function Sidebar({ activeNav, onNavChange, connectionStatus = 'connected', kbReady = true }) {
+export default function Sidebar({
+  activeNav,
+  onNavChange,
+  connectionStatus = 'connected',
+  kbReady = true,
+  customerConfig = {},
+}) {
   const isBackendConnected = connectionStatus === 'connected'
+  const orgName = customerConfig.organization || 'Acme Corporation'
+  const assistantName = customerConfig.assistant_name || 'Acme Knowledge Assistant'
+  const initialChar = orgName.charAt(0).toUpperCase() || 'A'
 
   return (
     <aside
@@ -44,7 +54,7 @@ export default function Sidebar({ activeNav, onNavChange, connectionStatus = 'co
         boxSizing: 'border-box',
       }}
     >
-      {/* ── Logo / Header ── */}
+      {/* ── Logo / Header with Customer Branding ── */}
       <div
         style={{
           height: 'var(--header-height)',
@@ -70,14 +80,14 @@ export default function Sidebar({ activeNav, onNavChange, connectionStatus = 'co
             flexShrink: 0,
           }}
         >
-          K
+          {initialChar}
         </div>
-        <div>
-          <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--color-text-primary)', lineHeight: 1.2, letterSpacing: '0.04em' }}>
-            ENTERPRISE AI
+        <div className="sidebar-brand-text" style={{ overflow: 'hidden' }}>
+          <div style={{ fontWeight: 700, fontSize: 12, color: 'var(--color-text-primary)', lineHeight: 1.2, letterSpacing: '0.04em', textTransform: 'uppercase', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
+            {orgName}
           </div>
-          <div style={{ fontSize: 10, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-            Forward Deployed Demo
+          <div style={{ fontSize: 10, color: 'var(--color-text-muted)', letterSpacing: '0.04em', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
+            {assistantName}
           </div>
         </div>
       </div>
@@ -103,6 +113,7 @@ export default function Sidebar({ activeNav, onNavChange, connectionStatus = 'co
             <button
               key={item.id}
               id={`nav-${item.id}`}
+              className="sidebar-item"
               onClick={() => onNavChange(item.id)}
               style={{
                 display: 'flex',
@@ -135,10 +146,11 @@ export default function Sidebar({ activeNav, onNavChange, connectionStatus = 'co
               }}
             >
               <span style={{ fontSize: 14 }}>{item.icon}</span>
-              <span style={{ flex: 1 }}>{item.label}</span>
+              <span className="sidebar-label" style={{ flex: 1 }}>{item.label}</span>
 
               {item.badge && (
                 <span
+                  className="sidebar-badge"
                   style={{
                     fontSize: 9,
                     fontWeight: 700,
@@ -172,6 +184,7 @@ export default function Sidebar({ activeNav, onNavChange, connectionStatus = 'co
 
       {/* ── Bottom System Status (Required by Section 21) ── */}
       <div
+        className="sidebar-bottom-status"
         style={{
           padding: '16px 18px',
           borderTop: '1px solid var(--color-sidebar-border)',

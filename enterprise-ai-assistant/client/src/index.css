@@ -104,3 +104,26 @@ html, body {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--color-text-muted);
 }
+
+/* ============================================================
+   Responsive Layout & Mobile/Tablet Support
+   ============================================================ */
+@media (max-width: 768px) {
+  :root {
+    --sidebar-width: 64px;
+    --header-height: 54px;
+  }
+
+  .sidebar-label,
+  .sidebar-badge,
+  .sidebar-brand-text,
+  .sidebar-bottom-status {
+    display: none !important;
+  }
+
+  .sidebar-item {
+    justify-content: center !important;
+    padding: 10px 0 !important;
+  }
+}
+

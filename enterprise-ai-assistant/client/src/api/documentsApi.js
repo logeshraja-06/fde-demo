@@ -12,9 +12,12 @@ import { request } from './api'
  * @param {File} file - Browser File object
  * @returns {Promise<object>} - Processed document metadata
  */
-export async function uploadDocument(file) {
+export async function uploadDocument(file, domain = 'General') {
   const formData = new FormData()
   formData.append('file', file)
+  if (domain) {
+    formData.append('domain', domain)
+  }
 
   return request('/api/documents/upload', {
     method: 'POST',

@@ -71,10 +71,11 @@ def add_document_chunks(
     filename: str,
     chunks: List[Dict[str, Any]],
     embeddings: List[List[float]],
-    page_number: Optional[int] = None
+    page_number: Optional[int] = None,
+    domain: Optional[str] = "General"
 ) -> int:
     """
-    Index a list of chunks into ChromaDB along with their embedding vectors.
+    Index a list of chunks into ChromaDB along with their embedding vectors and domain metadata.
 
     Args:
         document_id: UUID of the parent document.
@@ -82,6 +83,7 @@ def add_document_chunks(
         chunks: List of chunk dicts (each with 'id' and 'text').
         embeddings: List of 384-dimensional float vectors matching the chunks.
         page_number: Optional page number if extracted from a specific page.
+        domain: Knowledge domain (e.g. 'HR', 'Finance', 'IT', 'General').
 
     Returns:
         The number of chunks successfully indexed.
@@ -110,6 +112,7 @@ def add_document_chunks(
             "filename": filename,
             "chunk_id": chunk_id,
             "chunk_index": idx,
+            "domain": domain or "General",
         }
         # Add page if available and valid
         if page_number is not None and page_number > 0:
@@ -132,28 +135,20 @@ def add_document_chunks(
 
 def query_vector_store(
     query_embedding: List[float],
-    top_k: int = 3
+    top_k: int = 3,
+    domain: Optional[str] = None
 ) -> List[Dict[str, Any]]:
     """
     Query the vector store with a question embedding and return the top-K matches.
+    Supports optional knowledge domain filtering (HR, Finance, IT).
 
     Args:
         query_embedding: The vector representation of the user question.
         top_k: Number of nearest neighbors to retrieve.
+        domain: Optional domain filter ('HR', 'Finance', 'IT', or None/'ALL').
 
     Returns:
-        List of dicts:
-          [
-            {
-              "chunk_id": "leave-policy-001",
-              "source": "leave-policy.txt",
-              "page": 1 or None,
-              "score": 0.91,   # Cosine similarity score [0.0 - 1.0]
-              "distance": 0.09, # Raw cosine distance from Chroma
-              "text": "Employees are entitled..."
-            },
-            ...
-          ]
+        List of dicts with score, distance, text, source, domain, chunk_id.
     """
     collection = get_collection()
     count = collection.count()
@@ -166,11 +161,24 @@ def query_vector_store(
     # Query Chroma with broad candidate pool to allow deduplication of repeated document uploads
     candidate_k = min(count, max(actual_k * 10, 50))
 
-    results = collection.query(
-        query_embeddings=[query_embedding],
-        n_results=candidate_k,
-        include=["documents", "metadatas", "distances"]
-    )
+    query_kwargs: Dict[str, Any] = {
+        "query_embeddings": [query_embedding],
+        "n_results": candidate_k,
+        "include": ["documents", "metadatas", "distances"]
+    }
+
+    # Add metadata domain filter if requested and not "ALL"
+    if domain and domain.strip().upper() not in ("ALL", ""):
+        query_kwargs["where"] = {"domain": domain.strip()}
+
+    try:
+        results = collection.query(**query_kwargs)
+    except Exception as exc:
+        # If filtered query returns error (e.g. no docs with that domain), fall back safely
+        logger_warn = logging.getLogger("enterprise_ai.chroma")
+        logger_warn.warning("Filtered query error: %s. Falling back to unfiltered query.", exc)
+        query_kwargs.pop("where", None)
+        results = collection.query(**query_kwargs)
 
     formatted_results = []
     deferred_results = []
@@ -203,6 +211,7 @@ def query_vector_store(
                 "source": metadata.get("filename", "Unknown document"),
                 "document_id": metadata.get("document_id", ""),
                 "page": metadata.get("page", None),
+                "domain": metadata.get("domain", "General"),
                 "score": rounded_score,
                 "distance": round(dist, 4),
                 "text": text

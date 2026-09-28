@@ -33,6 +33,7 @@ export default function RetrievalPlayground() {
   const [query, setQuery] = useState('')
   const [topK, setTopK] = useState(3)
   const [threshold, setThreshold] = useState(0.35)
+  const [domain, setDomain] = useState('ALL')
   const [loading, setLoading] = useState(false)
   const [results, setResults] = useState(null)
   const [error, setError] = useState(null)
@@ -61,7 +62,7 @@ export default function RetrievalPlayground() {
     setResults(null)
 
     try {
-      const response = await searchKnowledgeBase(q, topK, threshold)
+      const response = await searchKnowledgeBase(q, topK, threshold, domain)
       setResults(response)
     } catch (err) {
       setError(err.message || 'Failed to search vector store.')
@@ -358,6 +359,31 @@ export default function RetrievalPlayground() {
                   <option value={0.65}>0.65 (Very High Precision)</option>
                 </select>
               </div>
+
+              {/* Domain Filter Selector (Phase 8 Requirement) */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px' }}>
+                <label style={{ color: 'var(--color-text-secondary)', fontWeight: 500 }}>Domain:</label>
+                <select
+                  id="domain-filter-select"
+                  value={domain}
+                  onChange={(e) => setDomain(e.target.value)}
+                  style={{
+                    background: 'var(--color-bg-base)',
+                    border: '1px solid var(--color-brand)',
+                    borderRadius: '6px',
+                    color: 'var(--color-brand)',
+                    fontWeight: 600,
+                    padding: '4px 10px',
+                    fontSize: '13px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <option value="ALL">All Domains</option>
+                  <option value="HR">HR Only</option>
+                  <option value="Finance">Finance Only</option>
+                  <option value="IT">IT Only</option>
+                </select>
+              </div>
             </div>
 
             {/* Quick Helper Note */}
@@ -535,6 +561,23 @@ export default function RetrievalPlayground() {
                         <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
                           📄 {chunk.source}
                         </span>
+
+                        {/* Domain Tag */}
+                        {chunk.domain && (
+                          <span
+                            style={{
+                              fontSize: '11px',
+                              fontWeight: 600,
+                              color: chunk.domain === 'HR' ? '#818cf8' : chunk.domain === 'Finance' ? '#34d399' : chunk.domain === 'IT' ? '#fbbf24' : '#94a3b8',
+                              background: chunk.domain === 'HR' ? 'rgba(99, 102, 241, 0.12)' : chunk.domain === 'Finance' ? 'rgba(16, 185, 129, 0.12)' : chunk.domain === 'IT' ? 'rgba(245, 158, 11, 0.12)' : 'rgba(148, 163, 184, 0.12)',
+                              border: `1px solid ${chunk.domain === 'HR' ? 'rgba(99, 102, 241, 0.3)' : chunk.domain === 'Finance' ? 'rgba(16, 185, 129, 0.3)' : chunk.domain === 'IT' ? 'rgba(245, 158, 11, 0.3)' : 'rgba(148, 163, 184, 0.3)'}`,
+                              padding: '2px 6px',
+                              borderRadius: '4px',
+                            }}
+                          >
+                            {chunk.domain}
+                          </span>
+                        )}
 
                         {/* Page indicator if present */}
                         {chunk.page && (

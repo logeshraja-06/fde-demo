@@ -1,0 +1,19 @@
+{
+  "customer": "Acme Corporation",
+  "organization": "Acme Corporation",
+  "assistant_name": "Acme Knowledge Assistant",
+  "project": "Internal Knowledge Assistant",
+  "business_goal": "Help employees quickly find answers from approved company documentation.",
+  "domains": [
+    "HR",
+    "Finance",
+    "IT"
+  ],
+  "max_input_length": 2000,
+  "rag_top_k": 3,
+  "grounding_threshold": 0.35,
+  "allow_unknown_answers": true,
+  "show_sources": true,
+  "mode": "engineering",
+  "version": "1.5.0"
+}
