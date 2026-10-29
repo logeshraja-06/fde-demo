@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { sendChatMessage } from '../services/api'
+import MarkdownRenderer from './MarkdownRenderer'
 
 export default function ExecutiveChat({
   customerConfig = {},
@@ -333,12 +334,15 @@ export default function ExecutiveChat({
                       padding: '14px 18px',
                       fontSize: '14.5px',
                       lineHeight: 1.6,
-                      whiteSpace: 'pre-wrap',
                       wordBreak: 'break-word',
                       boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
                     }}
                   >
-                    {msg.text}
+                    {msg.sender === 'ai' ? (
+                      <MarkdownRenderer content={msg.text} />
+                    ) : (
+                      <div style={{ whiteSpace: 'pre-wrap' }}>{msg.text}</div>
+                    )}
 
                     {/* Verified Source Citations */}
                     {msg.sources && msg.sources.length > 0 && (

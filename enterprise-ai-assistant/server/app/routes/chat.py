@@ -29,6 +29,11 @@ from app.services.llm_service import generate_grounded_response, is_llm_configur
 from app.services.output_guardrail import validate_llm_output
 from app.services.analytics_service import record_chat_event
 from app.services.config_service import get_customer_config
+from app.services.truthguard_service import (
+    detect_adversarial_conflicts,
+    evaluate_conflict_governance,
+    call_gemini_truthguard
+)
 
 logger = logging.getLogger("enterprise_ai.chat")
 
@@ -91,10 +96,16 @@ def chat_endpoint(payload: ChatRequest):
     # Load active runtime customer configuration
     cust_cfg = get_customer_config()
     max_input_len = cust_cfg.get("max_input_length", DEFAULT_MAX_INPUT_LENGTH)
-    active_threshold = payload.threshold if payload.threshold is not None else float(cust_cfg.get("grounding_threshold", RAG_GROUNDING_THRESHOLD))
+    cfg_threshold = float(cust_cfg.get("grounding_threshold", RAG_GROUNDING_THRESHOLD))
+    # Protect against uncalibrated client default thresholds (such as 0.70) blocking valid answers
+    if payload.threshold is not None and 0.0 < payload.threshold <= 0.45:
+        active_threshold = payload.threshold
+    else:
+        active_threshold = cfg_threshold
     effective_k = payload.top_k if payload.top_k is not None else int(cust_cfg.get("rag_top_k", DEFAULT_TOP_K))
 
-    logger.info("Chat request received: query='%s' (top_k=%d, threshold=%.2f, domain=%s)", user_message[:60], effective_k, active_threshold, payload.domain)
+    search_domain = payload.domain if (payload.domain and payload.domain.upper() not in ("ALL", "GENERAL", "")) else None
+    logger.info("Chat request received: query='%s' (top_k=%d, threshold=%.2f, domain=%s)", user_message[:60], effective_k, active_threshold, search_domain)
 
     # =========================================================================
     # LAYER 1: INPUT GUARDRAILS
@@ -141,7 +152,7 @@ def chat_endpoint(payload: ChatRequest):
             query=user_message,
             top_k=effective_k,
             threshold=active_threshold,
-            domain=payload.domain
+            domain=search_domain
         )
     except Exception as exc:
         logger.error("RAG retrieval execution failure: %s", exc)
@@ -208,18 +219,21 @@ def chat_endpoint(payload: ChatRequest):
     ]
 
     # =========================================================================
-    # LAYER 3: PROMPT CONSTRUCTION & LLM INVOCATION
+    # LAYER 3: TRUTHGUARD ADVERSARIAL VERIFICATION & GEMINI LLM INVOCATION
     # =========================================================================
-    prompt_payload = build_rag_prompt(
-        user_query=user_message,
-        retrieved_chunks=matched_chunks
-    )
+    conflicts = detect_adversarial_conflicts(matched_chunks)
+    governance = evaluate_conflict_governance(conflicts, matched_chunks)
+    logger.info("TruthGuard Adversarial Check: %d conflicts detected (governance status='%s')", len(conflicts), governance["status"])
 
     try:
-        llm_result = generate_grounded_response(
-            system_instruction=prompt_payload["system_instruction"],
-            user_prompt=prompt_payload["user_prompt"]
+        raw_llm_answer = call_gemini_truthguard(
+            query=user_message,
+            chunks=matched_chunks,
+            conflicts=conflicts,
+            governance=governance
         )
+        model_name = f"Google Gemini ({get_gemini_model_name()}) via TruthGuard"
+        logger.info("TruthGuard LLM generation completed with model='%s'", model_name)
     except Exception as exc:
         elapsed_ms = (time.perf_counter() - start_time) * 1000.0
         logger.error("LLM Generation failed gracefully: %s", exc)
@@ -260,10 +274,6 @@ def chat_endpoint(payload: ChatRequest):
                 "output_guardrail": PipelineStageInfo(status="not_run"),
             }
         )
-
-    raw_llm_answer = llm_result.get("answer", "")
-    model_name = llm_result.get("model", get_gemini_model_name())
-    logger.info("LLM generation completed with model='%s'", model_name)
 
     # =========================================================================
     # LAYER 4: OUTPUT GUARDRAILS

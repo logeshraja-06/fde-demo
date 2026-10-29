@@ -37,8 +37,14 @@ logger = logging.getLogger("enterprise_ai.documents")
 
 # ── File constraints ──────────────────────────────────────────────────────────
 MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024   # 10 MB
-ALLOWED_EXTENSIONS  = {".pdf", ".txt"}
-ALLOWED_MIME_TYPES  = {"application/pdf", "text/plain"}
+ALLOWED_EXTENSIONS  = {".pdf", ".txt", ".docx"}
+ALLOWED_MIME_TYPES  = {
+    "application/pdf",
+    "text/plain",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/msword",
+    "application/octet-stream"
+}
 
 # ── Storage paths ─────────────────────────────────────────────────────────────
 BASE_DIR       = Path(__file__).resolve().parents[2]   # server/
@@ -317,6 +323,17 @@ def _extract_text_and_meta(file_path: Path, file_type: str, file_bytes: bytes) -
         if not text.strip():
             raise ValueError("The document does not contain usable text.")
         return text, None
+    elif file_type == "docx":
+        try:
+            import docx  # type: ignore
+            doc = docx.Document(str(file_path))
+            paras = [p.text.strip() for p in doc.paragraphs if p.text.strip()]
+            text = "\n\n".join(paras)
+        except Exception as exc:
+            raise RuntimeError(f"Unable to process this DOCX: {exc}") from exc
+        if not text.strip():
+            raise ValueError("The document does not contain usable text.")
+        return text, 1
     else:
         raise ValueError(f"Unsupported document type: {file_type}")
 

@@ -4,6 +4,7 @@ import PipelineStatus from '../Pipeline/PipelineStatus'
 import SourceList from './SourceList'
 import RetrievedContext from './RetrievedContext'
 import LoadingPipeline from './LoadingPipeline'
+import MarkdownRenderer from '../MarkdownRenderer'
 
 const STARTER_PROMPTS = [
   {
@@ -332,7 +333,11 @@ export default function ChatView({ customerConfig = {}, viewMode = 'engineering'
                 )}
 
                 {/* Answer text */}
-                <div>{msg.text}</div>
+                {msg.sender === 'ai' ? (
+                  <MarkdownRenderer content={msg.text} />
+                ) : (
+                  <div style={{ whiteSpace: 'pre-wrap' }}>{msg.text}</div>
+                )}
 
                 {/* Reusable SourceList Component (shown if enabled in config) */}
                 {showSources && msg.sources && msg.sources.length > 0 && (
